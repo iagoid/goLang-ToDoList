@@ -3,24 +3,25 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"html/template"
+
 	"log"
 	"net/http"
 )
 
 type List struct {
-	Store   string   `json:"store"`
-	Product []string `json:"product"`
+	Store   string `json:"store"`
+	Product string `json:"product"`
 }
 
 var Lists []List = []List{
 	List{
 		Store:   "Supermercado",
-		Product: []string{"Alcool em gel", "Bebidas"},
+		Product: "Alcool em gel",
 	},
 	List{
 		Store:   "Fruteira",
-		Product: []string{"Alcool em gel", "Abacaxi"},
+		Product: "Alcool em gel",
 	},
 }
 
@@ -30,16 +31,27 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func createHandler(w http.ResponseWriter, r *http.Request) {
-	body, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		fmt.Print(err)
-	}
-	var newList List
-	json.Unmarshal(body, &newList)
-	Lists = append(Lists, newList)
+	tmpl := template.Must(template.ParseFiles("create.html"))
 
-	encoder := json.NewEncoder(w)
-	encoder.Encode(newList)
+	if r.Method != http.MethodPost {
+		tmpl.Execute(w, nil)
+		return
+	}
+
+	// TODO: fazer uma variavel que armazene a resposta que deve retornar(fazer o retorno uma vez)
+	// if r.FormValue("store") != "" || r.FormValue("products") != "" {
+	// 	tmpl.Execute(w, struct{ Error bool }{true})
+	// } else {
+	details := List{
+		Store:   r.FormValue("store"),
+		Product: r.FormValue("products"),
+	}
+
+	Lists = append(Lists, details)
+	fmt.Print(Lists)
+
+	tmpl.Execute(w, struct{ Success bool }{true})
+	// }
 }
 
 func main() {

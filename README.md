@@ -11,7 +11,9 @@ Abra a pasta todolist no terminal e digite o seguinte código<br>
 *go build todolist.go*<br>
 *./todolist*<br>
 Após isso abra seu navegador no link: 
-http://localhost:8080/view/
+http://localhost:8080/
+Acesse a página *http://localhost:8080/create*, lá existe um formulário, ao ser preenchido ele adiciona as listas o que já foi adicionado, basta entrar em qualquer outra página do localhost para visualizar o retorno em json
+
 
 ### Features
 
