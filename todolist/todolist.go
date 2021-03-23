@@ -14,6 +14,10 @@ type List struct {
 	Product string `json:"product"`
 }
 
+type Info struct {
+	Message string `json:"message"`
+}
+
 var Lists []List = []List{
 	List{
 		Store:   "Supermercado",
@@ -21,16 +25,17 @@ var Lists []List = []List{
 	},
 	List{
 		Store:   "Fruteira",
-		Product: "Alcool em gel",
+		Product: "Abacaxi",
 	},
 }
 
-func indexHandler(w http.ResponseWriter, r *http.Request) {
+func indexList(w http.ResponseWriter, r *http.Request) {
+
 	encoder := json.NewEncoder(w)
 	encoder.Encode(Lists)
 }
 
-func createHandler(w http.ResponseWriter, r *http.Request) {
+func createList(w http.ResponseWriter, r *http.Request) {
 	tmpl := template.Must(template.ParseFiles("create.html"))
 
 	if r.Method != http.MethodPost {
@@ -38,25 +43,29 @@ func createHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var info []Info = []Info{}
+
 	// TODO: fazer uma variavel que armazene a resposta que deve retornar(fazer o retorno uma vez)
-	// if r.FormValue("store") != "" || r.FormValue("products") != "" {
-	// 	tmpl.Execute(w, struct{ Error bool }{true})
-	// } else {
-	details := List{
-		Store:   r.FormValue("store"),
-		Product: r.FormValue("products"),
+	if r.FormValue("store") == "" || r.FormValue("products") == "" {
+		mensagem := Info{Message: "Prencha todos os dados"}
+		info = append(info, mensagem)
+	} else {
+		details := List{
+			Store:   r.FormValue("store"),
+			Product: r.FormValue("products"),
+		}
+
+		Lists = append(Lists, details)
+		fmt.Print(Lists)
+		mensagem := Info{Message: "Cadastrado com sucesso"}
+		info = append(info, mensagem)
 	}
-
-	Lists = append(Lists, details)
-	fmt.Print(Lists)
-
-	tmpl.Execute(w, struct{ Success bool }{true})
-	// }
+	json.NewEncoder(w).Encode(info)
 }
 
 func main() {
-	http.HandleFunc("/", indexHandler)
-	http.HandleFunc("/create/", createHandler)
+	http.HandleFunc("/", indexList)
+	http.HandleFunc("/create/", createList)
 
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
