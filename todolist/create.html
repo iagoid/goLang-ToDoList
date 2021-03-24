@@ -12,8 +12,7 @@
     <!-- TODO: Maneira de mostrar uma mensagem -->
     {{ if .Error }}
     <h1 class="message">Preencha todos os dados!</h1>
-    {{ end }}
-    {{ if .Success }}
+    {{ else if .Success }}
     <h1 class="message">Sua lista foi feita!</h1>
     {{ end }}
 

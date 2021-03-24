@@ -6,13 +6,20 @@
 
 **Golang**: É necessário ter a linguagem Go instalada em seu computador em uma versão compatível com a 1.16. Golang pode ser baixada no seguinte link:  https://golang.org/dl/
 
+**Mux**: O mux é utilizado para facilitar a listagem de rotas válidas, para mais informações acesse https://github.com/gorilla/mux
+
+**Opcional**: Caso você queira pode também baixar alguma ferramenta que permite enviar solicitações HTTP, como o PostMan ou Insomnia.
+
 ## Excução
 Abra a pasta todolist no terminal e digite o seguinte código<br>
 *go build todolist.go*<br>
 *./todolist*<br>
 Após isso abra seu navegador no link: 
-http://localhost:8080/
-Acesse a página *http://localhost:8080/create*, lá existe um formulário, ao ser preenchido ele adiciona as listas o que já foi adicionado, basta entrar em qualquer outra página do localhost para visualizar o retorno em json
+*http://localhost:8080/*, está é a página onde estão listadas todas as suas listas de tarefas(Observe que já existem duas pré-definidas)
+
+Acesse a página *http://localhost:8080/create*, lá existe um formulário, ao ser preenchido ele adiciona as listas.
+
+Para acessar um lista em especifico acesse *http://localhost:8080/view/algum_id_existente/*. aqui será retornada a sua lista ou uma página 404
 
 
 ### Features
