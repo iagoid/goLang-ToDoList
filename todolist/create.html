@@ -10,15 +10,15 @@
 
 <body>
     <!-- TODO: Maneira de mostrar uma mensagem -->
-    {{ if .Error }}
+    <!-- {{ if .Error }}
     <h1 class="message">Preencha todos os dados!</h1>
     {{ else if .Success }}
     <h1 class="message">Sua lista foi feita!</h1>
-    {{ end }}
+    {{ end }} -->
 
 
     <h1>Preencha sua lista abaixo</h1>
-    <form method="POST">
+    <form method="POST" for="/save/">
         <label>Local:</label><br />
         <input type="text" name="store"><br />
         <label>Produtos:</label><br />
