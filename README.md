@@ -12,14 +12,15 @@
 
 ## Excução
 Abra a pasta todolist no terminal e digite o seguinte código<br>
-*go build todolist.go*<br>
-*./todolist*<br>
+*go run todolist.go*<br>
 Após isso abra seu navegador no link: 
 *http://localhost:8080/*, está é a página onde estão listadas todas as suas listas de tarefas(Observe que já existem duas pré-definidas)
 
 Acesse a página *http://localhost:8080/create*, lá existe um formulário, ao ser preenchido ele adiciona as listas.
 
-Para acessar um lista em especifico acesse *http://localhost:8080/view/algum_id_existente/*. aqui será retornada a sua lista ou uma página 404
+Para acessar um lista em especifico acesse *http://localhost:8080/view/algum_id_existente/*. aqui será retornada a sua lista
+
+Para editar um lista em especifico acesse *http://localhost:8080/edit/algum_id_existente/*. aqui será mostrado um formulário que permite você editar sua lista
 
 
 ### Features

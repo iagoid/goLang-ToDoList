@@ -1,1 +1,1 @@
-[{"id":19,"store":"Supermercado","product":"jkljkl"},{"id":23,"store":"Supermercado","product":"çllkçl"}]
+[]

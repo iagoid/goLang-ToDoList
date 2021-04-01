@@ -19,25 +19,66 @@ type List struct {
 	Product string `json:"product"`
 }
 
-type Info struct {
-	Message string `json:"message"`
+type Message struct {
+	Success bool `json:"success"`
+	Error   bool `json:"error"`
 }
 
 var Lists []List = []List{}
+var editList = List{}
 
 var lastID int
 
+func getIdURL(params map[string]string) int {
+	id := params["id"]
+	idInt, err := strconv.Atoi(id)
+	if err != nil {
+		fmt.Println("Não foi possivel converter")
+	}
+	return idInt
+}
+
+func positionInLists(idSearch int) (int, bool) {
+	for i := range Lists {
+		if Lists[i].Id == idSearch {
+			return i, true
+		}
+	}
+	return 0, false
+}
+
+// TODO: Maneira mais eficiente de renderizar
 func pageCreate(w http.ResponseWriter, r *http.Request) {
-	tmpl := template.Must(template.ParseFiles("create.html"))
+	tmpl := template.Must(template.ParseFiles("templates/create.html"))
 	tmpl.Execute(w, nil)
-	return
+}
+
+func pageEdit(w http.ResponseWriter, r *http.Request) {
+	tmpl := template.Must(template.ParseFiles("templates/edit.html"))
+	idInt := getIdURL(mux.Vars(r))
+	pos, confirm := positionInLists(idInt)
+	if confirm {
+		editList = Lists[pos]
+		tmpl.Execute(w, Lists[pos])
+	} else {
+		pageNotFound(w, r)
+	}
 }
 
 func pageNotFound(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("Página inexistente")
-	tmpl := template.Must(template.ParseFiles("404.html"))
+	tmpl := template.Must(template.ParseFiles("templates/404.html"))
 	tmpl.Execute(w, nil)
-	return
+}
+
+func returnJSONList(w http.ResponseWriter, r *http.Request, list List) {
+	w.Header().Set("Content-type", "application/json")
+	w.WriteHeader((http.StatusCreated))
+	json.NewEncoder(w).Encode(list)
+	// if err != nil {
+	// 	json.NewEncoder(w).Encode(Message{false, true})
+	// } else {
+	// 	json.NewEncoder(w).Encode(Message{true, false})
+	// }
 }
 
 func indexList(w http.ResponseWriter, r *http.Request) {
@@ -47,13 +88,12 @@ func indexList(w http.ResponseWriter, r *http.Request) {
 }
 
 func createList(w http.ResponseWriter, r *http.Request) {
-	tmpl := template.Must(template.ParseFiles("create.html"))
+	tmpl := template.Must(template.ParseFiles("templates/create.html"))
+	store, product := r.FormValue("store"), r.FormValue("product")
 
-	store, products := r.FormValue("store"), r.FormValue("products")
-
-	if store == "" || products == "" {
+	if store == "" || product == "" {
 		fmt.Println("Erro, dados inválidos")
-		tmpl.Execute(w, struct{ Error bool }{true})
+		tmpl.Execute(w, editList)
 		return
 	}
 
@@ -61,48 +101,56 @@ func createList(w http.ResponseWriter, r *http.Request) {
 	newList := List{
 		Id:      lastID,
 		Store:   r.FormValue("store"),
-		Product: r.FormValue("products"),
+		Product: r.FormValue("product"),
 	}
 	Lists = append(Lists, newList)
-	w.Header().Set("Content-type", "application/json")
-	w.WriteHeader((http.StatusCreated))
-	json.NewEncoder(w).Encode(newList)
 	save()
+	tmpl.Execute(w, Message{true, false})
 }
 
 func viewList(w http.ResponseWriter, r *http.Request) {
-	params := mux.Vars(r)
-	id := params["id"]
-	idInt, err := strconv.Atoi(id)
-	if err != nil {
-		println("Não foi possivel converter")
+	idInt := getIdURL(mux.Vars(r))
+
+	pos, confirm := positionInLists(idInt)
+	if confirm {
+		returnJSONList(w, r, Lists[pos])
+	} else {
+		pageNotFound(w, r)
+	}
+}
+
+func updateList(w http.ResponseWriter, r *http.Request) {
+	tmpl := template.Must(template.ParseFiles("templates/edit.html"))
+
+	idInt := getIdURL(mux.Vars(r))
+	store, product := r.FormValue("store"), r.FormValue("product")
+
+	if store == "" || product == "" {
+		fmt.Println("Erro, dados inválidos")
+		message := Message{false, true}
+		tmpl.Execute(w, message)
+		return
 	}
 
-	for _, list := range Lists {
-		if list.Id == idInt {
-			w.Header().Set("Content-type", "application/json")
-			w.WriteHeader((http.StatusCreated))
-			json.NewEncoder(w).Encode(list)
-			return
-		}
+	pos, confirm := positionInLists(idInt)
+	if confirm {
+		Lists[pos].Product = product
+		Lists[pos].Store = store
+		returnJSONList(w, r, Lists[pos])
+	} else {
+		pageNotFound(w, r)
 	}
-	pageNotFound(w, r)
 }
 
 func deleteList(w http.ResponseWriter, r *http.Request) {
-	params := mux.Vars(r)
-	id := params["id"]
-	idInt, err := strconv.Atoi(id)
-	if err != nil {
-		println("Não foi possivel converter")
-	}
+	idInt := getIdURL(mux.Vars(r))
 
 	for i, list := range Lists {
 		if list.Id == idInt {
 			Lists = append(Lists[:i], Lists[i+1:]...)
-			println("Apagado com sucesso")
+			fmt.Println("Apagado com sucesso")
 			save()
-			http.Redirect(w, r, "http://localhost:8080/", 301)
+			http.Redirect(w, r, "http://localhost:8080/", http.StatusMovedPermanently)
 			// TODO: Mensagem de confirmação que deletou
 			return
 		}
@@ -125,11 +173,9 @@ func loadPage() {
 
 	_ = json.Unmarshal([]byte(file), &Lists)
 
-	for _, list := range Lists {
-		println(list.Store)
-		println(list.Product)
+	if len(Lists) > 0 {
+		lastID = Lists[len(Lists)-1].Id
 	}
-	lastID = Lists[len(Lists)-1].Id
 }
 
 func main() {
@@ -139,8 +185,10 @@ func main() {
 	router.HandleFunc("/create/", createList).Methods("POST")
 	router.HandleFunc("/create/", pageCreate).Methods("GET")
 	router.HandleFunc("/view/{id}/", viewList)
+	router.HandleFunc("/edit/{id}/", updateList).Methods("POST")
+	router.HandleFunc("/edit/{id}/", pageEdit).Methods("GET")
 	router.HandleFunc("/delete/{id}/", deleteList)
-	router.HandleFunc("/404/", pageNotFound)
+	router.NotFoundHandler = http.HandlerFunc(pageNotFound)
 
 	log.Fatal(http.ListenAndServe(":8080", router))
 }
