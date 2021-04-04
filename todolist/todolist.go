@@ -61,39 +61,43 @@ func pageEdit(w http.ResponseWriter, r *http.Request) {
 		editList = Lists[pos]
 		tmpl.Execute(w, Lists[pos])
 	} else {
-		pageNotFound(w, r)
+		returnStatusCodeJSON(w, r, http.StatusNotFound)
 	}
 }
 
 func pageNotFound(w http.ResponseWriter, r *http.Request) {
 	tmpl := template.Must(template.ParseFiles("templates/404.html"))
+	returnStatusCodeJSON(w, r, http.StatusNotFound)
 	tmpl.Execute(w, nil)
 }
 
-func returnJSONList(w http.ResponseWriter, r *http.Request, list List) {
+func returnStatusCodeJSON(w http.ResponseWriter, r *http.Request, statusCode int) {
 	w.Header().Set("Content-type", "application/json")
-	w.WriteHeader((http.StatusCreated))
-	json.NewEncoder(w).Encode(list)
-	// if err != nil {
-	// 	json.NewEncoder(w).Encode(Message{false, true})
-	// } else {
-	// 	json.NewEncoder(w).Encode(Message{true, false})
-	// }
+	w.WriteHeader(statusCode)
 }
 
-func indexList(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-type", "application/json")
-	w.WriteHeader((http.StatusCreated))
+func returnJSONList(w http.ResponseWriter, r *http.Request, list List) {
+	err := json.NewEncoder(w).Encode(list)
+	if err != nil {
+		fmt.Println("Erro na codificação")
+		// json.NewEncoder(w).Encode(Message{false, true})
+	} else {
+		fmt.Println("Sucesso na codificação")
+		// json.NewEncoder(w).Encode(Message{true, false})
+	}
+}
+
+func indexLists(w http.ResponseWriter, r *http.Request) {
+	returnStatusCodeJSON(w, r, http.StatusOK)
 	json.NewEncoder(w).Encode(Lists)
 }
 
 func createList(w http.ResponseWriter, r *http.Request) {
-	tmpl := template.Must(template.ParseFiles("templates/create.html"))
 	store, product := r.FormValue("store"), r.FormValue("product")
 
 	if store == "" || product == "" {
 		fmt.Println("Erro, dados inválidos")
-		tmpl.Execute(w, editList)
+		returnStatusCodeJSON(w, r, http.StatusNoContent)
 		return
 	}
 
@@ -105,7 +109,8 @@ func createList(w http.ResponseWriter, r *http.Request) {
 	}
 	Lists = append(Lists, newList)
 	save()
-	tmpl.Execute(w, Message{true, false})
+	returnStatusCodeJSON(w, r, http.StatusCreated)
+	returnJSONList(w, r, Lists[len(Lists)-1])
 }
 
 func viewList(w http.ResponseWriter, r *http.Request) {
@@ -113,22 +118,22 @@ func viewList(w http.ResponseWriter, r *http.Request) {
 
 	pos, confirm := positionInLists(idInt)
 	if confirm {
+		returnStatusCodeJSON(w, r, http.StatusOK)
 		returnJSONList(w, r, Lists[pos])
 	} else {
-		pageNotFound(w, r)
+		returnStatusCodeJSON(w, r, http.StatusNotFound)
 	}
 }
 
 func updateList(w http.ResponseWriter, r *http.Request) {
-	tmpl := template.Must(template.ParseFiles("templates/edit.html"))
-
 	idInt := getIdURL(mux.Vars(r))
 	store, product := r.FormValue("store"), r.FormValue("product")
 
+	fmt.Println("Chegou aqui")
+
 	if store == "" || product == "" {
 		fmt.Println("Erro, dados inválidos")
-		message := Message{false, true}
-		tmpl.Execute(w, message)
+		returnStatusCodeJSON(w, r, http.StatusNoContent)
 		return
 	}
 
@@ -136,26 +141,28 @@ func updateList(w http.ResponseWriter, r *http.Request) {
 	if confirm {
 		Lists[pos].Product = product
 		Lists[pos].Store = store
+		returnStatusCodeJSON(w, r, http.StatusOK)
 		returnJSONList(w, r, Lists[pos])
 	} else {
-		pageNotFound(w, r)
+		returnStatusCodeJSON(w, r, http.StatusNotFound)
 	}
 }
 
 func deleteList(w http.ResponseWriter, r *http.Request) {
 	idInt := getIdURL(mux.Vars(r))
 
-	for i, list := range Lists {
-		if list.Id == idInt {
-			Lists = append(Lists[:i], Lists[i+1:]...)
-			fmt.Println("Apagado com sucesso")
-			save()
-			http.Redirect(w, r, "http://localhost:8080/", http.StatusMovedPermanently)
-			// TODO: Mensagem de confirmação que deletou
-			return
-		}
+	pos, confirm := positionInLists(idInt)
+
+	if confirm {
+		Lists = append(Lists[:pos], Lists[pos+1:]...)
+		fmt.Println("Apagado com sucesso")
+		save()
+		// returnStatusCodeJSON(w, r, http.StatusAccepted)
+		http.Redirect(w, r, "http://localhost:8080/", http.StatusAccepted)
+
+	} else {
+		returnStatusCodeJSON(w, r, http.StatusNotFound)
 	}
-	pageNotFound(w, r)
 }
 
 func save() {
@@ -166,8 +173,10 @@ func save() {
 	ioutil.WriteFile(filename, lists, 0600)
 }
 
-// TODO: Verificar e essa é aa melhor maneira ou realizar
+// TODO: Verificar e essa é a melhor maneira ou realizar
 //  a criação de um arquivo para cada
+// TODO: Salvar sem o id é premitir pgar o objetos pelo iterador
+// (não iria precisar pegar o numero do id e depois a posição)
 func loadPage() {
 	file, _ := ioutil.ReadFile("txt/lists.txt")
 
@@ -181,13 +190,13 @@ func loadPage() {
 func main() {
 	loadPage()
 	router := mux.NewRouter().StrictSlash(true)
-	router.HandleFunc("/", indexList)
+	router.HandleFunc("/", indexLists)
 	router.HandleFunc("/create/", createList).Methods("POST")
 	router.HandleFunc("/create/", pageCreate).Methods("GET")
-	router.HandleFunc("/view/{id}/", viewList)
-	router.HandleFunc("/edit/{id}/", updateList).Methods("POST")
-	router.HandleFunc("/edit/{id}/", pageEdit).Methods("GET")
-	router.HandleFunc("/delete/{id}/", deleteList)
+	router.HandleFunc("/view/{id:[0-9]+}/", viewList)
+	router.HandleFunc("/edit/{id:[0-9]+}/", updateList).Methods("POST")
+	router.HandleFunc("/edit/{id:[0-9]+}/", pageEdit).Methods("GET")
+	router.HandleFunc("/delete/{id:[0-9]+}/", deleteList)
 	router.NotFoundHandler = http.HandlerFunc(pageNotFound)
 
 	log.Fatal(http.ListenAndServe(":8080", router))

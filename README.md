@@ -18,10 +18,14 @@ Após isso abra seu navegador no link:
 
 Acesse a página *http://localhost:8080/create*, lá existe um formulário, ao ser preenchido ele adiciona as listas.
 
-Para acessar um lista em especifico acesse *http://localhost:8080/view/algum_id_existente/*. aqui será retornada a sua lista
+Para acessar uma lista acesse *http://localhost:8080/view/algum_id_existente/*. aqui será retornada a sua lista
 
-Para editar um lista em especifico acesse *http://localhost:8080/edit/algum_id_existente/*. aqui será mostrado um formulário que permite você editar sua lista
+Para editar uma lista acesse *http://localhost:8080/edit/algum_id_existente/*. aqui será mostrado um formulário que permite você editar sua lista
 
+Para deleter uma lista acesse *http://localhost:8080/delete/algum_id_existente/*, irá aparecer uma mensagem escrito accepted, caso você volte para a página inicial sua lista já não existirá
+
+## Testes
+Para executar os testes basta rodar o código *go test* no terminal enquanto o server estiver ativo, se tudo der certo ele reornará a mensagem PASS no terminal.
 
 ### Features
 
