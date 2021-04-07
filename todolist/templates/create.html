@@ -15,13 +15,12 @@
 
 <body>
     <div class="container">
-
         <div class="messages mt-3">
-            {{ if .Error }}
+            {{ if .Message.Error }}
             <div class="alert alert-danger" role="alert">
                 <h2>Preencha todos os dados!</h2>
             </div>
-            {{ else if .Success }}
+            {{ else if .Message.Success }}
             <div class="alert alert-success" role="alert">
                 <h2>Sua lista foi feita!</h2>
             </div>
@@ -29,17 +28,29 @@
         </div>
 
         <h1 class="text-center mt-3">Criação de Lista</h1>
-        <form method="POST">
+        <form method="POST" {{ if .Message.Duplicate}} action="newList" {{ end }}>
             <div class="form-group">
-                <input name="store" type="text" class="form-control" placeholder="Estabelecimento">
+                <input name="store" type="text" class="form-control" placeholder="Estabelecimento"
+                    value="{{.List.Store}}" {{ if .Message.Duplicate}} disabled {{ end }}>
             </div>
             <div class="form-group">
-                <textarea placeholder="Produtos" name="product" class="form-control" rows="3"></textarea>
+                <textarea placeholder="Produtos" name="product" class="form-control" rows="3" {{ if .Message.Duplicate}}
+                    disabled {{ end }}>{{.List.Product}}</textarea>
             </div>
+
+            {{ if .Message.Duplicate }}
+            <div class="alert alert-warning" role="alert">
+                <h2>Já existe uma lista deste local. Você gostaria de cria-lá mesmo assim?</h2>
+            </div>
+            <button type="submit" class="btn btn-danger btn-lg btn-block">Sim, criar a lista</button>
+            <a href="../create" type="button" class="btn btn-primary btn-lg btn-block">Não, cancelar criação</a>
+            {{ else }}
             <button type="submit" class="btn btn-primary btn-lg btn-block">Enviar</button>
+            {{ end }}
+
         </form>
 
-        <!-- <table class="table mt-5">
+        <table class="table mt-5">
             <thead>
                 <tr>
                     <th scope="col">Estabelecimento</th>
@@ -52,11 +63,11 @@
             <tbody>
                 {{ range .Lists }}
                 <tr>
-                    <td>{{ .Product }}</td>
                     <td>{{ .Store }}</td>
-                    <td><a href="/edit/{{ .Id }}">
+                    <td>{{ .Product }}</td>
+                    <td><a href="/edit/{{ .Id }}" type="button" class="btn btn-primary btn-block">
                             <i class="fas fa-edit"></i></a></td>
-                    <td><a href="/delete/{{ .Id }}"><i class="fas fa-trash-alt"></i></a></td>
+                    <td><a href="/delete/{{ .Id }}" type="button" class="btn btn-danger btn-block"><i class="fas fa-trash-alt"></i></a></td>
                 </tr>
                 {{ end }}
             {{ else }}
@@ -67,7 +78,7 @@
                 </tr>
             {{ end }}
             </tbody>
-        </table> -->
+        </table>
 
     </div>
 </body>
@@ -76,7 +87,7 @@
 
 <script>
     $(document).ready(function () {
-        $(".alert").fadeToggle(5000)
+        $(".messages .alert").fadeToggle(5000)
     })
 </script>
 

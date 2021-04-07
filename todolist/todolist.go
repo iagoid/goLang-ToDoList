@@ -10,22 +10,30 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/go-playground/validator/v10"
 	"github.com/gorilla/mux"
 )
 
 type List struct {
-	Id      int    `json:"id"`
-	Store   string `json:"store"`
-	Product string `json:"product"`
+	Id      int    `json:"id" validate:"required"`
+	Store   string `json:"store" validate:"required"`
+	Product string `json:"product" validate:"required"`
 }
 
 type Message struct {
-	Success bool `json:"success"`
-	Error   bool `json:"error"`
+	Success   bool `json:"success"`
+	Error     bool `json:"error"`
+	Duplicate bool `json:"duplicate"`
+}
+
+type Data struct {
+	List    List
+	Message Message
+	Lists   []List
 }
 
 var Lists []List = []List{}
-var editList = List{}
+var newList = List{}
 
 var lastID int
 
@@ -49,8 +57,12 @@ func positionInLists(idSearch int) (int, bool) {
 
 // TODO: Maneira mais eficiente de renderizar
 func pageCreate(w http.ResponseWriter, r *http.Request) {
+	newList.Product = ""
+	newList.Store = ""
 	tmpl := template.Must(template.ParseFiles("templates/create.html"))
-	tmpl.Execute(w, nil)
+	m := Message{false, false, false}
+	data := Data{newList, m, Lists}
+	tmpl.Execute(w, data)
 }
 
 func pageEdit(w http.ResponseWriter, r *http.Request) {
@@ -58,7 +70,6 @@ func pageEdit(w http.ResponseWriter, r *http.Request) {
 	idInt := getIdURL(mux.Vars(r))
 	pos, confirm := positionInLists(idInt)
 	if confirm {
-		editList = Lists[pos]
 		tmpl.Execute(w, Lists[pos])
 	} else {
 		returnStatusCodeJSON(w, r, http.StatusNotFound)
@@ -87,28 +98,52 @@ func returnJSONList(w http.ResponseWriter, r *http.Request, list List) {
 	}
 }
 
+func valitateForm(w http.ResponseWriter, r *http.Request, form List) error {
+	validate := validator.New()
+	err := validate.StructExcept(form, "Id")
+	if err != nil {
+		fmt.Println(err.Error())
+		return err
+	}
+	return nil
+}
+
 func indexLists(w http.ResponseWriter, r *http.Request) {
 	returnStatusCodeJSON(w, r, http.StatusOK)
 	json.NewEncoder(w).Encode(Lists)
 }
 
-func createList(w http.ResponseWriter, r *http.Request) {
+func verifyFormCreate(w http.ResponseWriter, r *http.Request) {
 	store, product := r.FormValue("store"), r.FormValue("product")
-
-	if store == "" || product == "" {
-		fmt.Println("Erro, dados inválidos")
+	newList = List{
+		Store:   store,
+		Product: product,
+	}
+	err := valitateForm(w, r, newList)
+	if err != nil {
 		returnStatusCodeJSON(w, r, http.StatusNoContent)
 		return
 	}
 
-	lastID++
-	newList := List{
-		Id:      lastID,
-		Store:   r.FormValue("store"),
-		Product: r.FormValue("product"),
+	for _, list := range Lists {
+		if list.Store == store {
+			tmpl := template.Must(template.ParseFiles("templates/create.html"))
+			m := Message{false, false, true}
+			data := Data{newList, m, Lists}
+			returnStatusCodeJSON(w, r, http.StatusConflict)
+			tmpl.Execute(w, data)
+			return
+		}
 	}
+	createList(w, r)
+}
+
+func createList(w http.ResponseWriter, r *http.Request) {
+	lastID++
+	newList.Id = lastID
 	Lists = append(Lists, newList)
 	save()
+
 	returnStatusCodeJSON(w, r, http.StatusCreated)
 	returnJSONList(w, r, Lists[len(Lists)-1])
 }
@@ -129,18 +164,21 @@ func updateList(w http.ResponseWriter, r *http.Request) {
 	idInt := getIdURL(mux.Vars(r))
 	store, product := r.FormValue("store"), r.FormValue("product")
 
-	fmt.Println("Chegou aqui")
-
-	if store == "" || product == "" {
-		fmt.Println("Erro, dados inválidos")
-		returnStatusCodeJSON(w, r, http.StatusNoContent)
-		return
-	}
-
 	pos, confirm := positionInLists(idInt)
 	if confirm {
-		Lists[pos].Product = product
-		Lists[pos].Store = store
+		editList := List{
+			Id:      Lists[pos].Id,
+			Store:   store,
+			Product: product,
+		}
+		err := valitateForm(w, r, editList)
+
+		Lists[pos] = editList
+
+		if err != nil {
+			returnStatusCodeJSON(w, r, http.StatusNoContent)
+			return
+		}
 		returnStatusCodeJSON(w, r, http.StatusOK)
 		returnJSONList(w, r, Lists[pos])
 	} else {
@@ -175,8 +213,6 @@ func save() {
 
 // TODO: Verificar e essa é a melhor maneira ou realizar
 //  a criação de um arquivo para cada
-// TODO: Salvar sem o id é premitir pgar o objetos pelo iterador
-// (não iria precisar pegar o numero do id e depois a posição)
 func loadPage() {
 	file, _ := ioutil.ReadFile("txt/lists.txt")
 
@@ -191,10 +227,11 @@ func main() {
 	loadPage()
 	router := mux.NewRouter().StrictSlash(true)
 	router.HandleFunc("/", indexLists)
-	router.HandleFunc("/create/", createList).Methods("POST")
+	router.HandleFunc("/create/", verifyFormCreate).Methods("POST")
 	router.HandleFunc("/create/", pageCreate).Methods("GET")
+	router.HandleFunc("/create/newList", createList).Methods("POST")
 	router.HandleFunc("/view/{id:[0-9]+}/", viewList)
-	router.HandleFunc("/edit/{id:[0-9]+}/", updateList).Methods("POST")
+	router.HandleFunc("/edit/{id:[0-9]+}/", updateList).Methods("POST") //PUT
 	router.HandleFunc("/edit/{id:[0-9]+}/", pageEdit).Methods("GET")
 	router.HandleFunc("/delete/{id:[0-9]+}/", deleteList)
 	router.NotFoundHandler = http.HandlerFunc(pageNotFound)

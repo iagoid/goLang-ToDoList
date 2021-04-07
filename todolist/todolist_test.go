@@ -33,7 +33,7 @@ func TestCreateList(t *testing.T) {
 		"product": {"Farinha"},
 	}
 
-	res, err := http.PostForm(host+"/create/", data)
+	res, err := http.PostForm(host+"/create/newList", data)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -51,10 +51,27 @@ func TestCreateList(t *testing.T) {
 	_ = json.Unmarshal([]byte(body), &createListTest)
 	Lists = append(Lists, createListTest)
 
-	inexistentID = fmt.Sprint(Lists[len(Lists)-1].Id + 1)
 	idCreatedTest = fmt.Sprint(Lists[len(Lists)-1].Id)
+	inexistentID = fmt.Sprint(Lists[len(Lists)-1].Id + 1)
 	fmt.Println("Id criado: " + idCreatedTest)
+}
 
+func TestCreateConflictList(t *testing.T) {
+
+	data := url.Values{
+		"store":   {"Supermercado"},
+		"product": {"Guaraná"},
+	}
+
+	res, err := http.PostForm(host+"/create/", data)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if status := res.StatusCode; status != http.StatusConflict {
+		t.Errorf("TestCreateConflictList não retornou o status esperado: \nretornado %v \nesperado %v",
+			status, http.StatusConflict)
+	}
 }
 
 func TestCreateListErrorText(t *testing.T) {
