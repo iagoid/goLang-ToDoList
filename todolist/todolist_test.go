@@ -7,10 +7,11 @@ import (
 	"net/http"
 	"net/url"
 	"testing"
+	"todolist.com/utils"
 )
 
-var host = "http://localhost:8080"
-var createListTest = List{}
+var host = "http://localhost:8081"
+var createListTest = utils.List{}
 var inexistentID string
 var idCreatedTest string
 
@@ -49,10 +50,10 @@ func TestCreateList(t *testing.T) {
 	}
 
 	_ = json.Unmarshal([]byte(body), &createListTest)
-	Lists = append(Lists, createListTest)
+	utils.Lists = append(utils.Lists, createListTest)
 
-	idCreatedTest = fmt.Sprint(Lists[len(Lists)-1].Id)
-	inexistentID = fmt.Sprint(Lists[len(Lists)-1].Id + 1)
+	idCreatedTest = fmt.Sprint(utils.Lists[len(utils.Lists)-1].Id)
+	inexistentID = fmt.Sprint(utils.Lists[len(utils.Lists)-1].Id + 1)
 	fmt.Println("Id criado: " + idCreatedTest)
 }
 
