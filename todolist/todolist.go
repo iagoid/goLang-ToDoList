@@ -17,7 +17,17 @@ import (
 func pageCreate(w http.ResponseWriter, r *http.Request) {
 	utils.NewList.Product = ""
 	utils.NewList.Store = ""
-	tmpl := template.Must(template.ParseFiles("templates/create.html"))
+
+	tmpl, err := template.New("create.html").Funcs(template.FuncMap{
+		"dec": func(numero int) int {
+			return numero - 1
+		},
+	}).ParseFiles("templates/create.html")
+	if err != nil {
+		panic(err)
+	}
+
+	// tmpl := template.Must(template.ParseFiles("templates/create.html"))
 	m := utils.Message{false, false, false}
 	data := utils.Data{utils.NewList, m, utils.Lists}
 	tmpl.Execute(w, data)
@@ -151,9 +161,55 @@ func deleteList(w http.ResponseWriter, r *http.Request) {
 	if confirm {
 		utils.Lists = append(utils.Lists[:pos], utils.Lists[pos+1:]...)
 		utils.Save()
-		// returnStatusCodeJSON(w, r, http.StatusAccepted)
 		http.Redirect(w, r, "http://localhost:8080/create", http.StatusAccepted)
 
+	} else {
+		returnStatusCodeJSON(w, r, http.StatusNotFound)
+	}
+}
+
+func checkList(w http.ResponseWriter, r *http.Request) {
+	idInt := utils.GetIdURL(mux.Vars(r))
+
+	pos, confirm := utils.PositionInLists(idInt)
+	if confirm {
+		if !utils.Lists[pos].Check {
+			utils.Lists[pos].Check = true
+		} else {
+			utils.Lists[pos].Check = false
+		}
+		utils.Save()
+		returnStatusCodeJSON(w, r, http.StatusOK)
+	} else {
+		returnStatusCodeJSON(w, r, http.StatusNotFound)
+	}
+}
+
+func upList(w http.ResponseWriter, r *http.Request) {
+	idInt := utils.GetIdURL(mux.Vars(r))
+
+	pos, confirm := utils.PositionInLists(idInt)
+	if confirm {
+		if pos > 0 {
+			utils.Lists[pos], utils.Lists[pos-1] = utils.Lists[pos-1], utils.Lists[pos]
+		}
+		utils.Save()
+		returnStatusCodeJSON(w, r, http.StatusOK)
+	} else {
+		returnStatusCodeJSON(w, r, http.StatusNotFound)
+	}
+}
+
+func downList(w http.ResponseWriter, r *http.Request) {
+	idInt := utils.GetIdURL(mux.Vars(r))
+
+	pos, confirm := utils.PositionInLists(idInt)
+	if confirm {
+		if pos < len(utils.Lists) {
+			utils.Lists[pos], utils.Lists[pos+1] = utils.Lists[pos+1], utils.Lists[pos]
+		}
+		utils.Save()
+		returnStatusCodeJSON(w, r, http.StatusOK)
 	} else {
 		returnStatusCodeJSON(w, r, http.StatusNotFound)
 	}
@@ -170,6 +226,9 @@ func main() {
 	router.HandleFunc("/edit/{id:[0-9]+}/", updateList).Methods("POST") //PUT
 	router.HandleFunc("/edit/{id:[0-9]+}/", pageEdit).Methods("GET")
 	router.HandleFunc("/delete/{id:[0-9]+}/", deleteList)
+	router.HandleFunc("/check/{id:[0-9]+}/", checkList)
+	router.HandleFunc("/up/{id:[0-9]+}/", upList)
+	router.HandleFunc("/down/{id:[0-9]+}/", downList)
 	router.NotFoundHandler = http.HandlerFunc(pageNotFound)
 
 	log.Fatal(http.ListenAndServe(":8080", router))

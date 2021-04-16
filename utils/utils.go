@@ -1,11 +1,11 @@
 package utils
 
 import (
-	"fmt"
-	"strconv"
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
+	"strconv"
 )
 
 var NewList = List{}
@@ -22,6 +22,7 @@ type List struct {
 	Id      int    `json:"id" validate:"required"`
 	Store   string `json:"store" validate:"required"`
 	Product string `json:"product" validate:"required"`
+	Check   bool   `json:"check"`
 }
 
 type Message struct {
@@ -31,7 +32,6 @@ type Message struct {
 }
 
 var Lists []List = []List{}
-
 
 func GetIdURL(params map[string]string) int {
 	id := params["id"]
@@ -46,7 +46,6 @@ func PositionInLists(idSearch int) (int, bool) {
 	for i := range Lists {
 		if Lists[i].Id == idSearch {
 			return i, true
-			break
 		}
 	}
 	return 0, false
@@ -64,12 +63,12 @@ func Save() {
 //  a criação de um arquivo para cada
 func LoadPage() {
 	file, err := ioutil.ReadFile("txt/lists.txt")
-	if(err != nil){
-		fmt.Println("Erro ao carregar", err.Error())
+	if err != nil {
+		panic("Erro ao carregar")
 	}
 	err = json.Unmarshal([]byte(file), &Lists)
-	if(err != nil){
-		fmt.Println("Não foi possivel converter")
+	if err != nil {
+		panic("Não foi possivel converter")
 	}
 
 	if len(Lists) > 0 {

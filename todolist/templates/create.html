@@ -13,6 +13,8 @@
     <title>Criar nova Lista</title>
 </head>
 
+{{ $len := dec (len .Lists) }}
+
 <body>
     <div class="container">
         <div class="messages mt-3">
@@ -53,6 +55,8 @@
         <table class="table mt-5">
             <thead>
                 <tr>
+                    <th scope="col">Mover</th>
+                    <th scope="col">Status</th>
                     <th scope="col">Estabelecimento</th>
                     <th scope="col">Produtos</th>
                     <th scope="col">Editar</th>
@@ -61,13 +65,34 @@
             </thead>
             {{ if .Lists}}
             <tbody>
-                {{ range .Lists }}
+                {{ range $index, $element := .Lists }}
                 <tr>
-                    <td>{{ .Store }}</td>
-                    <td>{{ .Product }}</td>
-                    <td><a href="/edit/{{ .Id }}" type="button" class="btn btn-primary btn-block">
+                    <td>
+                        {{ if (gt $index 0)}}
+                        <a href="/up/{{ $element.Id }}" >
+                            <i class="fas fa-arrow-up" style="font-size:30px;"></i>
+                        </a>
+                        {{ end }}
+                        {{ if (gt $len $index) }}
+                        <a href="/down/{{ $element.Id }}" style="float: right;">
+                            <i class="fas fa-arrow-down" style="font-size:30px;"></i>
+                        </a>
+                        {{ end }}
+                    </td>
+                    <td>
+                        <a href="/check/{{ $element.Id }}" >
+                            {{ if $element.Check }}
+                            <i class="fas fa-check-square" style="font-size:30px;"></i>
+                            {{ else }}
+                            <i class="far fa-square" style="font-size:30px;"></i>
+                            {{ end }}
+                        </a>
+                    </td>
+                    <td>{{ $element.Store }}</td>
+                    <td>{{ $element.Product }}</td>
+                    <td><a href="/edit/{{ $element.Id }}" type="button" class="btn btn-primary btn-block">
                             <i class="fas fa-edit"></i></a></td>
-                    <td><a href="/delete/{{ .Id }}" type="button" class="btn btn-danger btn-block"><i class="fas fa-trash-alt"></i></a></td>
+                    <td><a href="/delete/{{ $element.Id }}" type="button" class="btn btn-danger btn-block"><i class="fas fa-trash-alt"></i></a></td>
                 </tr>
                 {{ end }}
             {{ else }}

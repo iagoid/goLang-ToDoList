@@ -7,10 +7,11 @@ import (
 	"net/http"
 	"net/url"
 	"testing"
+
 	"todolist.com/utils"
 )
 
-var host = "http://localhost:8081"
+var host = "http://localhost:8080"
 var createListTest = utils.List{}
 var inexistentID string
 var idCreatedTest string

@@ -1,1 +1,1 @@
-[{"id":1,"store":"Supermercado111","product":"klkljjkl"},{"id":2,"store":"Supermercado","product":"klkljjkl"},{"id":3,"store":"Supermercado","product":"kjljkljk"},{"id":4,"store":"Teste","product":"99\r\n"}]
+[{"id":1,"store":"assdsasa","product":"saassaas","check":true},{"id":4,"store":"Suermercado","product":"fdds","check":false},{"id":3,"store":"assdsa","product":"asasa","check":false},{"id":6,"store":"ddf","product":"dsd","check":false}]
