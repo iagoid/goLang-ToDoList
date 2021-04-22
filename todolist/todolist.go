@@ -7,49 +7,19 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/go-playground/validator/v10"
 	"github.com/gorilla/mux"
 
 	"todolist.com/utils"
 )
 
-// TODO: Maneira mais eficiente de renderizar
-func pageCreate(w http.ResponseWriter, r *http.Request) {
-	utils.NewList.Product = ""
-	utils.NewList.Store = ""
+var tmpl, _ = template.New("create.html").Funcs(template.FuncMap{
+	"dec": func(numero int) int {
+		return numero - 1
+	},
+}).ParseFiles("templates/create.html", "templates/edit.html", "templates/404.html",
+	"templates/partials/header.html", "templates/partials/footer.html")
 
-	tmpl, err := template.New("create.html").Funcs(template.FuncMap{
-		"dec": func(numero int) int {
-			return numero - 1
-		},
-	}).ParseFiles("templates/create.html")
-	if err != nil {
-		panic(err)
-	}
-
-	// tmpl := template.Must(template.ParseFiles("templates/create.html"))
-	m := utils.Message{false, false, false}
-	data := utils.Data{utils.NewList, m, utils.Lists}
-	tmpl.Execute(w, data)
-}
-
-func pageEdit(w http.ResponseWriter, r *http.Request) {
-	tmpl := template.Must(template.ParseFiles("templates/edit.html"))
-	idInt := utils.GetIdURL(mux.Vars(r))
-	pos, confirm := utils.PositionInLists(idInt)
-	if confirm {
-		tmpl.Execute(w, utils.Lists[pos])
-	} else {
-		returnStatusCodeJSON(w, r, http.StatusNotFound)
-	}
-}
-
-func pageNotFound(w http.ResponseWriter, r *http.Request) {
-	tmpl := template.Must(template.ParseFiles("templates/404.html"))
-	returnStatusCodeJSON(w, r, http.StatusNotFound)
-	tmpl.Execute(w, nil)
-}
-
+///////////////////////////////////// Retorno JSON /////////////////////////////////////
 func returnStatusCodeJSON(w http.ResponseWriter, r *http.Request, statusCode int) {
 	w.Header().Set("Content-type", "application/json")
 	w.WriteHeader(statusCode)
@@ -58,27 +28,20 @@ func returnStatusCodeJSON(w http.ResponseWriter, r *http.Request, statusCode int
 func returnJSONList(w http.ResponseWriter, r *http.Request, list utils.List) {
 	err := json.NewEncoder(w).Encode(list)
 	if err != nil {
-		fmt.Println("Erro na codificação")
-		// json.NewEncoder(w).Encode(Message{false, true})
+		log.Fatal("Erro na codificação")
 	} else {
 		fmt.Println("Sucesso na codificação")
-		// json.NewEncoder(w).Encode(Message{true, false})
 	}
 }
 
-func valitateForm(w http.ResponseWriter, r *http.Request, form utils.List) error {
-	validate := validator.New()
-	err := validate.StructExcept(form, "Id")
-	if err != nil {
-		fmt.Println(err.Error())
-		return err
-	}
-	return nil
-}
+///////////////////////////////////// Criar Lista /////////////////////////////////////
+func pageCreate(w http.ResponseWriter, r *http.Request) {
+	utils.NewList.Product = ""
+	utils.NewList.Store = ""
 
-func indexLists(w http.ResponseWriter, r *http.Request) {
-	returnStatusCodeJSON(w, r, http.StatusOK)
-	json.NewEncoder(w).Encode(utils.Lists)
+	m := utils.Message{false, false, false}
+	data := utils.Data{utils.NewList, m, utils.Lists}
+	tmpl.ExecuteTemplate(w, "create", data)
 }
 
 func verifyFormCreate(w http.ResponseWriter, r *http.Request) {
@@ -87,7 +50,7 @@ func verifyFormCreate(w http.ResponseWriter, r *http.Request) {
 		Store:   store,
 		Product: product,
 	}
-	err := valitateForm(w, r, utils.NewList)
+	err := utils.ValitateForm(utils.NewList)
 	if err != nil {
 		returnStatusCodeJSON(w, r, http.StatusNoContent)
 		return
@@ -95,11 +58,10 @@ func verifyFormCreate(w http.ResponseWriter, r *http.Request) {
 
 	for _, list := range utils.Lists {
 		if list.Store == store {
-			tmpl := template.Must(template.ParseFiles("templates/create.html"))
 			m := utils.Message{false, false, true}
 			data := utils.Data{utils.NewList, m, utils.Lists}
 			w.WriteHeader(http.StatusConflict)
-			tmpl.Execute(w, data)
+			tmpl.ExecuteTemplate(w, "create", data)
 			return
 		}
 	}
@@ -116,13 +78,12 @@ func createList(w http.ResponseWriter, r *http.Request) {
 	returnJSONList(w, r, utils.Lists[len(utils.Lists)-1])
 }
 
-func viewList(w http.ResponseWriter, r *http.Request) {
+///////////////////////////////////// Editar Lista /////////////////////////////////////
+func pageEdit(w http.ResponseWriter, r *http.Request) {
 	idInt := utils.GetIdURL(mux.Vars(r))
-
 	pos, confirm := utils.PositionInLists(idInt)
 	if confirm {
-		returnStatusCodeJSON(w, r, http.StatusOK)
-		returnJSONList(w, r, utils.Lists[pos])
+		tmpl.ExecuteTemplate(w, "edit", utils.Lists[pos])
 	} else {
 		returnStatusCodeJSON(w, r, http.StatusNotFound)
 	}
@@ -135,18 +96,19 @@ func updateList(w http.ResponseWriter, r *http.Request) {
 	pos, confirm := utils.PositionInLists(idInt)
 	if confirm {
 		editList := utils.List{
-			Id:      utils.Lists[pos].Id,
 			Store:   store,
 			Product: product,
 		}
-		err := valitateForm(w, r, editList)
-
-		utils.Lists[pos] = editList
-
+		err := utils.ValitateForm(editList)
 		if err != nil {
 			returnStatusCodeJSON(w, r, http.StatusNoContent)
 			return
 		}
+		editList.Id = utils.Lists[pos].Id
+		editList.Check = utils.Lists[pos].Check
+
+		utils.Lists[pos] = editList
+
 		returnStatusCodeJSON(w, r, http.StatusOK)
 		returnJSONList(w, r, utils.Lists[pos])
 	} else {
@@ -154,6 +116,7 @@ func updateList(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+///////////////////////////////////// Deletar Lista /////////////////////////////////////
 func deleteList(w http.ResponseWriter, r *http.Request) {
 	idInt := utils.GetIdURL(mux.Vars(r))
 
@@ -168,6 +131,31 @@ func deleteList(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+////////////////////////////////////// Ver Lista //////////////////////////////////////
+func indexLists(w http.ResponseWriter, r *http.Request) {
+	returnStatusCodeJSON(w, r, http.StatusOK)
+	json.NewEncoder(w).Encode(utils.Lists)
+}
+
+func viewList(w http.ResponseWriter, r *http.Request) {
+	idInt := utils.GetIdURL(mux.Vars(r))
+
+	pos, confirm := utils.PositionInLists(idInt)
+	if confirm {
+		returnStatusCodeJSON(w, r, http.StatusOK)
+		returnJSONList(w, r, utils.Lists[pos])
+	} else {
+		returnStatusCodeJSON(w, r, http.StatusNotFound)
+	}
+}
+
+///////////////////////////////////////// 404 /////////////////////////////////////////
+func pageNotFound(w http.ResponseWriter, r *http.Request) {
+	returnStatusCodeJSON(w, r, http.StatusNotFound)
+	tmpl.ExecuteTemplate(w, "404", nil)
+}
+
+///////////////////////// Concluir e Alterar Posição da Lista /////////////////////////
 func checkList(w http.ResponseWriter, r *http.Request) {
 	idInt := utils.GetIdURL(mux.Vars(r))
 
@@ -216,14 +204,14 @@ func downList(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	utils.LoadPage()
+	utils.LoadLists()
 	router := mux.NewRouter().StrictSlash(true)
 	router.HandleFunc("/", indexLists)
 	router.HandleFunc("/create/", verifyFormCreate).Methods("POST")
 	router.HandleFunc("/create/", pageCreate).Methods("GET")
 	router.HandleFunc("/create/newList", createList).Methods("POST")
 	router.HandleFunc("/view/{id:[0-9]+}/", viewList)
-	router.HandleFunc("/edit/{id:[0-9]+}/", updateList).Methods("POST") //PUT
+	router.HandleFunc("/edit/{id:[0-9]+}/", updateList).Methods("POST") //
 	router.HandleFunc("/edit/{id:[0-9]+}/", pageEdit).Methods("GET")
 	router.HandleFunc("/delete/{id:[0-9]+}/", deleteList)
 	router.HandleFunc("/check/{id:[0-9]+}/", checkList)

@@ -1,1 +1,1 @@
-[{"id":1,"store":"assdsasa","product":"saassaas","check":true},{"id":4,"store":"Suermercado","product":"fdds","check":false},{"id":3,"store":"assdsa","product":"asasa","check":false},{"id":6,"store":"ddf","product":"dsd","check":false}]
+[]

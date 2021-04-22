@@ -35,7 +35,7 @@ func TestCreateList(t *testing.T) {
 		"product": {"Farinha"},
 	}
 
-	res, err := http.PostForm(host+"/create/newList", data)
+	res, err := http.PostForm(host+"/create/", data)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -201,6 +201,7 @@ func TestEditListErrorID(t *testing.T) {
 	}
 }
 
+/*
 func TestDeleteList(t *testing.T) {
 	res, err := http.Get(host + "/delete/" + idCreatedTest)
 	if err != nil {
@@ -230,3 +231,4 @@ func TestDeleteListErrorID(t *testing.T) {
 			status, http.StatusNotFound)
 	}
 }
+*/

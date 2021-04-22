@@ -24,6 +24,22 @@ Para editar uma lista acesse *http://localhost:8080/edit/algum_id_existente/*. a
 
 Para deleter uma lista acesse *http://localhost:8080/delete/algum_id_existente/*, irá aparecer uma mensagem escrito accepted, caso você volte para a página inicial sua lista já não existirá
 
+## Explicações
+Todas as listas criadas são salvas no arquivo lists.txt.
+Ao iniciar o programa ele inicialmente carrega todas as listas com a função LoadLists, ela percorre os resultados buscando o ultimo Id, para ao criar a nova lista ela não possuir um mesmo identificador
+
+A parte da criação de uma Lista é realizada em 2 partes, a primeira (verifyFormCreate), valida os campos e verifica se alguma lista que se refere aquele estabelecimento já foi criada, se sim ele armazena aqueles dados em uma variavel e retorna a pergunta se o usuário deseja criar a lista, se a resposta for sim ele cria a Lista utilizando os dados já armazenados.
+
+A página de edição busca a posição daquela Lista dentro das Listas e altera pelos valores que vieram pelo formulário.
+
+A exclusão de uma Lista é feita simplesmente buscando a posição desta na Lists e então a remove de lá
+
+A checagem da conclusão da lista é feita simplesmente verificando se aquela lista já foi concluida ou não, ao enviar a requisição o valor é simplesmente alterado.
+
+Já as funções upList e downList servem para a pessoa alterar a posição da Lista no array das Lists
+
+Após cada uma dessas fases é chamada a função Save, que salva as listas novamente no arquivo txt
+
 ## Testes
 Para executar os testes basta rodar o código *go test* no terminal enquanto o server estiver ativo, se tudo der certo ele reornará a mensagem PASS no terminal.
 

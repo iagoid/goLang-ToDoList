@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"io/ioutil"
 	"strconv"
+
+	"github.com/go-playground/validator"
 )
 
 var NewList = List{}
@@ -33,6 +35,7 @@ type Message struct {
 
 var Lists []List = []List{}
 
+// Pega o Id da Lista que veio pelo formulário
 func GetIdURL(params map[string]string) int {
 	id := params["id"]
 	idInt, err := strconv.Atoi(id)
@@ -42,6 +45,7 @@ func GetIdURL(params map[string]string) int {
 	return idInt
 }
 
+// Pega a posição da lista dentro do Lists
 func PositionInLists(idSearch int) (int, bool) {
 	for i := range Lists {
 		if Lists[i].Id == idSearch {
@@ -51,6 +55,18 @@ func PositionInLists(idSearch int) (int, bool) {
 	return 0, false
 }
 
+// Valida o formulário de acordo com as especificações no List
+func ValitateForm(form List) error {
+	validate := validator.New()
+	err := validate.StructExcept(form, "Id")
+	if err != nil {
+		fmt.Println(err.Error())
+		return err
+	}
+	return nil
+}
+
+// Salva todos os arquivos no txt lists.txt
 func Save() {
 	filename := "txt/lists.txt"
 	reqBodyBytes := new(bytes.Buffer)
@@ -59,9 +75,8 @@ func Save() {
 	ioutil.WriteFile(filename, lists, 0600)
 }
 
-// TODO: Verificar e essa é a melhor maneira ou realizar
-//  a criação de um arquivo para cada
-func LoadPage() {
+// Carrega todos os arquivos do txt lists.txt
+func LoadLists() {
 	file, err := ioutil.ReadFile("txt/lists.txt")
 	if err != nil {
 		panic("Erro ao carregar")
@@ -71,7 +86,9 @@ func LoadPage() {
 		panic("Não foi possivel converter")
 	}
 
-	if len(Lists) > 0 {
-		LastID = Lists[len(Lists)-1].Id
+	for i := range Lists {
+		if Lists[i].Id > LastID {
+			LastID = Lists[i].Id
+		}
 	}
 }
