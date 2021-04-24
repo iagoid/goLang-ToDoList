@@ -1,22 +1,27 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"html/template"
+	"io"
+	"io/ioutil"
 	"log"
 	"net/http"
+	"net/url"
+	"strings"
 
 	"github.com/gorilla/mux"
 
 	"todolist.com/utils"
 )
 
-var tmpl, _ = template.New("create.html").Funcs(template.FuncMap{
+var tmpl, _ = template.New("templates").Funcs(template.FuncMap{
 	"dec": func(numero int) int {
 		return numero - 1
 	},
-}).ParseFiles("templates/create.html", "templates/edit.html", "templates/404.html",
+}).ParseFiles("templates/create.html", "templates/edit.html", "templates/list.html", "templates/404.html",
 	"templates/partials/header.html", "templates/partials/footer.html")
 
 ///////////////////////////////////// Retorno JSON /////////////////////////////////////
@@ -36,43 +41,70 @@ func returnJSONList(w http.ResponseWriter, r *http.Request, list utils.List) {
 
 ///////////////////////////////////// Criar Lista /////////////////////////////////////
 func pageCreate(w http.ResponseWriter, r *http.Request) {
-	utils.NewList.Product = ""
-	utils.NewList.Store = ""
+	if r.Method == "GET" {
+		utils.NewList.Product = ""
+		utils.NewList.Store = ""
 
-	m := utils.Message{false, false, false}
-	data := utils.Data{utils.NewList, m, utils.Lists}
-	tmpl.ExecuteTemplate(w, "create", data)
-}
+		m := utils.Message{}
+		data := utils.Data{utils.NewList, m, utils.Lists}
+		tmpl.ExecuteTemplate(w, "create", data)
+	} else {
+		endpoint := "http://localhost:8080/createList/"
 
-func verifyFormCreate(w http.ResponseWriter, r *http.Request) {
-	store, product := r.FormValue("store"), r.FormValue("product")
-	utils.NewList = utils.List{
-		Store:   store,
-		Product: product,
-	}
-	err := utils.ValitateForm(utils.NewList)
-	if err != nil {
-		returnStatusCodeJSON(w, r, http.StatusNoContent)
-		return
-	}
+		form := url.Values{}
+		form.Add("store", r.FormValue("store"))
+		form.Add("product", r.FormValue("product"))
 
-	for _, list := range utils.Lists {
-		if list.Store == store {
-			m := utils.Message{false, false, true}
-			data := utils.Data{utils.NewList, m, utils.Lists}
-			w.WriteHeader(http.StatusConflict)
-			tmpl.ExecuteTemplate(w, "create", data)
-			return
+		res, err := http.PostForm(endpoint, form)
+		if err != nil {
+			log.Fatal(err)
 		}
+		var m = utils.Message{}
+		status := res.StatusCode
+		if status == http.StatusConflict {
+			m.Duplicate = true
+			m.Text = "Já existe uma lista chamada" + r.FormValue("product") + ". Gostaria de cria-lá mesmo assim?"
+		} else if status == http.StatusNoContent {
+			m.Error = true
+			m.Text = "Por favor preenha todos os campos"
+		} else if status == http.StatusCreated {
+			m.Success = true
+			m.Text = "A lista " + r.FormValue("store") + " foi criada"
+		}
+		data := utils.Data{utils.NewList, m, utils.Lists}
+		tmpl.ExecuteTemplate(w, "create", data)
 	}
-	createList(w, r)
+
 }
 
 func createList(w http.ResponseWriter, r *http.Request) {
+	store, product := r.FormValue("store"), r.FormValue("product")
+
+	if store != utils.NewList.Store || utils.NewList.Store == "" {
+		utils.NewList = utils.List{
+			Store:   store,
+			Product: product,
+		}
+		err := utils.ValitateForm(utils.NewList)
+		if err != nil {
+			returnStatusCodeJSON(w, r, http.StatusNoContent)
+			return
+		}
+
+		for _, list := range utils.Lists {
+			if list.Store == store {
+				returnStatusCodeJSON(w, r, http.StatusConflict)
+				return
+			}
+		}
+	}
+
 	utils.LastID++
 	utils.NewList.Id = utils.LastID
 	utils.Lists = append(utils.Lists, utils.NewList)
 	utils.Save()
+	utils.NewList.Store = ""
+	utils.NewList.Product = ""
 
 	returnStatusCodeJSON(w, r, http.StatusCreated)
 	returnJSONList(w, r, utils.Lists[len(utils.Lists)-1])
@@ -80,12 +112,43 @@ func createList(w http.ResponseWriter, r *http.Request) {
 
 ///////////////////////////////////// Editar Lista /////////////////////////////////////
 func pageEdit(w http.ResponseWriter, r *http.Request) {
-	idInt := utils.GetIdURL(mux.Vars(r))
-	pos, confirm := utils.PositionInLists(idInt)
-	if confirm {
-		tmpl.ExecuteTemplate(w, "edit", utils.Lists[pos])
+	if r.Method == "GET" {
+		idInt := utils.GetIdURL(mux.Vars(r))
+		pos, confirm := utils.PositionInLists(idInt)
+		if confirm {
+			tmpl.ExecuteTemplate(w, "edit", utils.Lists[pos])
+		} else {
+			returnStatusCodeJSON(w, r, http.StatusNotFound)
+		}
 	} else {
-		returnStatusCodeJSON(w, r, http.StatusNotFound)
+		id := utils.GetIdURL(mux.Vars(r))
+		client := &http.Client{}
+		endpoint := "http://localhost:8080/edit/" + fmt.Sprint(id)
+
+		form := url.Values{}
+		form.Add("store", r.FormValue("store"))
+		form.Add("product", r.FormValue("product"))
+
+		req, err := http.NewRequest("PUT", endpoint, bytes.NewBuffer([]byte(r.Form.Encode())))
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		resp, err := client.Do(req)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		var m = utils.Message{}
+		if resp.StatusCode == http.StatusOK {
+			m.Success = true
+			m.Text = "Editado Com Sucesso"
+		} else {
+			m.Error = true
+			m.Text = "Erro ao editar"
+		}
+		data := utils.Data{utils.NewList, m, utils.Lists}
+		tmpl.ExecuteTemplate(w, "create", data)
 	}
 }
 
@@ -149,13 +212,56 @@ func viewList(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func pageViewList(w http.ResponseWriter, r *http.Request) {
+	id := utils.GetIdURL(mux.Vars(r))
+	resp, err := http.Get("http://localhost:8080/view/" + fmt.Sprint(id))
+	if err != nil {
+		log.Fatal(err)
+	}
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Fatal(body)
+	}
+	content := utils.NewList
+	err = json.Unmarshal(body, &content)
+	if err != nil {
+		log.Fatal(err)
+	}
+	tmpl.ExecuteTemplate(w, "list", content)
+}
+
 ///////////////////////////////////////// 404 /////////////////////////////////////////
 func pageNotFound(w http.ResponseWriter, r *http.Request) {
 	returnStatusCodeJSON(w, r, http.StatusNotFound)
 	tmpl.ExecuteTemplate(w, "404", nil)
 }
 
-///////////////////////// Concluir e Alterar Posição da Lista /////////////////////////
+///////////////////////// Marcar Lista Como Concluida /////////////////////////
+func pageCheckList(w http.ResponseWriter, r *http.Request) {
+	id := utils.GetIdURL(mux.Vars(r))
+	resp, err := http.Get("http://localhost:8080/check/" + fmt.Sprint(id))
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer resp.Body.Close()
+
+	respData, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var m = utils.Message{}
+	if resp.StatusCode == http.StatusOK {
+		m.Success = true
+		m.Text = string(respData)
+	} else {
+		m.Error = true
+		m.Text = "Erro ao concluir tarefa"
+	}
+	data := utils.Data{utils.NewList, m, utils.Lists}
+	tmpl.ExecuteTemplate(w, "create", data)
+}
+
 func checkList(w http.ResponseWriter, r *http.Request) {
 	idInt := utils.GetIdURL(mux.Vars(r))
 
@@ -163,8 +269,10 @@ func checkList(w http.ResponseWriter, r *http.Request) {
 	if confirm {
 		if !utils.Lists[pos].Check {
 			utils.Lists[pos].Check = true
+			io.WriteString(w, "Tarefa Concluida")
 		} else {
 			utils.Lists[pos].Check = false
+			io.WriteString(w, "Tarefa marcada como não concluida")
 		}
 		utils.Save()
 		returnStatusCodeJSON(w, r, http.StatusOK)
@@ -173,50 +281,85 @@ func checkList(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func upList(w http.ResponseWriter, r *http.Request) {
-	idInt := utils.GetIdURL(mux.Vars(r))
-
-	pos, confirm := utils.PositionInLists(idInt)
-	if confirm {
-		if pos > 0 {
-			utils.Lists[pos], utils.Lists[pos-1] = utils.Lists[pos-1], utils.Lists[pos]
-		}
-		utils.Save()
-		returnStatusCodeJSON(w, r, http.StatusOK)
+///////////////////////// Alterar Posição da Lista /////////////////////////
+func pageChangePosition(w http.ResponseWriter, r *http.Request) {
+	endpoint := ""
+	if strings.HasPrefix(fmt.Sprint(r.URL), "/up") {
+		endpoint = "http://localhost:8080/up/"
 	} else {
-		returnStatusCodeJSON(w, r, http.StatusNotFound)
+		endpoint = "http://localhost:8080/down/"
 	}
+
+	id := utils.GetIdURL(mux.Vars(r))
+	resp, err := http.Get(endpoint + fmt.Sprint(id))
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer resp.Body.Close()
+
+	respData, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var m = utils.Message{}
+	if resp.StatusCode == http.StatusOK {
+		m.Success = true
+		m.Text = string(respData)
+	} else {
+		m.Error = true
+		m.Text = "Erro ao modificar posição"
+	}
+	data := utils.Data{utils.NewList, m, utils.Lists}
+	tmpl.ExecuteTemplate(w, "create", data)
 }
 
-func downList(w http.ResponseWriter, r *http.Request) {
+func changePosition(w http.ResponseWriter, r *http.Request) {
 	idInt := utils.GetIdURL(mux.Vars(r))
 
 	pos, confirm := utils.PositionInLists(idInt)
+
+	frase := ""
 	if confirm {
-		if pos < len(utils.Lists) {
-			utils.Lists[pos], utils.Lists[pos+1] = utils.Lists[pos+1], utils.Lists[pos]
+		if strings.HasPrefix(fmt.Sprint(r.URL), "/up") {
+			if pos > 0 {
+				utils.Lists[pos], utils.Lists[pos-1] = utils.Lists[pos-1], utils.Lists[pos]
+				frase = "Lista " + utils.Lists[pos-1].Store + " subiu uma posição"
+			}
+		} else if strings.HasPrefix(fmt.Sprint(r.URL), "/down") {
+			if pos < len(utils.Lists) {
+				utils.Lists[pos], utils.Lists[pos+1] = utils.Lists[pos+1], utils.Lists[pos]
+				frase = "Lista " + utils.Lists[pos+1].Store + " desceu uma posição"
+			}
 		}
 		utils.Save()
 		returnStatusCodeJSON(w, r, http.StatusOK)
+		io.WriteString(w, frase)
 	} else {
 		returnStatusCodeJSON(w, r, http.StatusNotFound)
+		io.WriteString(w, "Não foi possivel modificar a posição dessa lista")
 	}
 }
 
 func main() {
 	utils.LoadLists()
 	router := mux.NewRouter().StrictSlash(true)
+	// API
 	router.HandleFunc("/", indexLists)
-	router.HandleFunc("/create/", verifyFormCreate).Methods("POST")
-	router.HandleFunc("/create/", pageCreate).Methods("GET")
-	router.HandleFunc("/create/newList", createList).Methods("POST")
-	router.HandleFunc("/view/{id:[0-9]+}/", viewList)
-	router.HandleFunc("/edit/{id:[0-9]+}/", updateList).Methods("POST") //
-	router.HandleFunc("/edit/{id:[0-9]+}/", pageEdit).Methods("GET")
-	router.HandleFunc("/delete/{id:[0-9]+}/", deleteList)
-	router.HandleFunc("/check/{id:[0-9]+}/", checkList)
-	router.HandleFunc("/up/{id:[0-9]+}/", upList)
-	router.HandleFunc("/down/{id:[0-9]+}/", downList)
+	router.HandleFunc("/createList/", createList).Methods("POST")
+	router.HandleFunc("/view/{id:[0-9]+}/", viewList).Methods("GET")
+	router.HandleFunc("/edit/{id:[0-9]+}/", updateList).Methods("PUT")
+	router.HandleFunc("/delete/{id:[0-9]+}/", deleteList) // DELETE
+	router.HandleFunc("/check/{id:[0-9]+}/", checkList).Methods("GET")
+	router.HandleFunc("/up/{id:[0-9]+}/", changePosition)
+	router.HandleFunc("/down/{id:[0-9]+}/", changePosition)
+	// TEMPLATES
+	router.HandleFunc("/create/", pageCreate)
+	router.HandleFunc("/viewTemplate/{id:[0-9]+}/", pageViewList)
+	router.HandleFunc("/edit/{id:[0-9]+}/", pageEdit)
+	router.HandleFunc("/checkPage/{id:[0-9]+}/", pageCheckList)
+	router.HandleFunc("/upTemplate/{id:[0-9]+}/", pageChangePosition)
+	router.HandleFunc("/downTemplate/{id:[0-9]+}/", pageChangePosition)
 	router.NotFoundHandler = http.HandlerFunc(pageNotFound)
 
 	log.Fatal(http.ListenAndServe(":8080", router))

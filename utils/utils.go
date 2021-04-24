@@ -28,9 +28,10 @@ type List struct {
 }
 
 type Message struct {
-	Success   bool `json:"success"`
-	Error     bool `json:"error"`
-	Duplicate bool `json:"duplicate"`
+	Success   bool   `json:"success"`
+	Error     bool   `json:"error"`
+	Duplicate bool   `json:"duplicate"`
+	Text      string `json:"texto"`
 }
 
 var Lists []List = []List{}
@@ -60,7 +61,6 @@ func ValitateForm(form List) error {
 	validate := validator.New()
 	err := validate.StructExcept(form, "Id")
 	if err != nil {
-		fmt.Println(err.Error())
 		return err
 	}
 	return nil

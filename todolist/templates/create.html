@@ -2,98 +2,92 @@
 
 {{template "header"}}
 
-    {{ $len := dec (len .Lists) }}
-    <div class="container">
-        <div class="messages mt-3">
-            {{ if .Message.Error }}
-            <div class="alert alert-danger" role="alert">
-                <h2>Preencha todos os dados!</h2>
-            </div>
-            {{ else if .Message.Success }}
-            <div class="alert alert-success" role="alert">
-                <h2>Sua lista foi feita!</h2>
-            </div>
-            {{ end }}
+{{ $len := dec (len .Lists) }}
+<div class="container">
+
+    <h1 class="text-center mt-3">Criação de Lista</h1>
+    <form method="POST">
+        <div class="form-group">
+            <input name="store" type="text" class="form-control" placeholder="Estabelecimento" value="{{.List.Store}}">
+        </div>
+        <div class="form-group">
+            <textarea placeholder="Produtos" name="product" class="form-control" rows="3">{{.List.Product}}</textarea>
         </div>
 
+        {{ if .Message.Duplicate }}
+        <div class="alert alert-warning" role="alert">
+            <h2>{{.Message.Text}}</h2>
+        </div>
+        <button type="submit" class="btn btn-danger btn-lg btn-block">Sim, criar a lista</button>
+        <a href="../create" type="button" class="btn btn-primary btn-lg btn-block">Não, cancelar criação</a>
+        {{ else }}
+        <button type="submit" class="btn btn-primary btn-lg btn-block">Enviar</button>
+        {{ end }}
+    </form>
 
-        <h1 class="text-center mt-3">Criação de Lista</h1>
-        <form method="POST" {{ if .Message.Duplicate}} action="newList" {{ end }}>
-            <div class="form-group">
-                <input name="store" type="text" class="form-control" placeholder="Estabelecimento"
-                    value="{{.List.Store}}" {{ if .Message.Duplicate}} disabled {{ end }}>
-            </div>
-            <div class="form-group">
-                <textarea placeholder="Produtos" name="product" class="form-control" rows="3" {{ if .Message.Duplicate}}
-                    disabled {{ end }}>{{.List.Product}}</textarea>
-            </div>
 
-            {{ if .Message.Duplicate }}
-            <div class="alert alert-warning" role="alert">
-                <h2>Já existe uma lista deste local. Você gostaria de cria-lá mesmo assim?</h2>
-            </div>
-            <button type="submit" class="btn btn-danger btn-lg btn-block">Sim, criar a lista</button>
-            <a href="../create" type="button" class="btn btn-primary btn-lg btn-block">Não, cancelar criação</a>
-            {{ else }}
-            <button type="submit" class="btn btn-primary btn-lg btn-block">Enviar</button>
-            {{ end }}
-
-        </form>
-
-        <table class="table mt-5">
-            <thead>
-                <tr>
-                    <th scope="col">Mover</th>
-                    <th scope="col">Status</th>
-                    <th scope="col">Estabelecimento</th>
-                    <th scope="col">Produtos</th>
-                    <th scope="col">Editar</th>
-                    <th scope="col">Excluir</th>
-                </tr>
-            </thead>
-            {{ if .Lists}}
-            <tbody>
-                {{ range $index, $element := .Lists }}
-                <tr>
-                    <td>
-                        {{ if (gt $index 0)}}
-                        <a href="/up/{{ $element.Id }}" >
-                            <i class="fas fa-arrow-up" style="font-size:30px;"></i>
-                        </a>
-                        {{ end }}
-                        {{ if (gt $len $index) }}
-                        <a href="/down/{{ $element.Id }}" style="float: right;">
-                            <i class="fas fa-arrow-down" style="font-size:30px;"></i>
-                        </a>
-                        {{ end }}
-                    </td>
-                    <td>
-                        <a href="/check/{{ $element.Id }}" >
-                            {{ if $element.Check }}
-                            <i class="fas fa-check-square" style="font-size:30px;"></i>
-                            {{ else }}
-                            <i class="far fa-square" style="font-size:30px;"></i>
-                            {{ end }}
-                        </a>
-                    </td>
-                    <td>{{ $element.Store }}</td>
-                    <td>{{ $element.Product }}</td>
-                    <td><a href="/edit/{{ $element.Id }}" type="button" class="btn btn-primary btn-block">
-                            <i class="fas fa-edit"></i></a></td>
-                    <td><a href="/delete/{{ $element.Id }}" type="button" class="btn btn-danger btn-block"><i class="fas fa-trash-alt"></i></a></td>
-                </tr>
-                {{ end }}
-            {{ else }}
-                <tr>
-                    <td colspan="4" class="text-center">
-                        <h3>Você não tem nenhuma lista cadastrada</h3>
-                    </td>
-                </tr>
-            {{ end }}
-            </tbody>
-        </table>
-
+    <div class="messages mt-3">
+        <div {{ if .Message.Error }} class="alert alert-danger" {{ else if .Message.Success }}
+            class="alert alert-success" {{ end }} role="alert">
+            <h2>{{.Message.Text}}</h2>
+        </div>
     </div>
+
+    <table class="table mt-5">
+        <thead>
+            <tr>
+                <th scope="col">Mover</th>
+                <th scope="col">Status</th>
+                <th scope="col">Estabelecimento</th>
+                <th scope="col">Produtos</th>
+                <th scope="col">Editar</th>
+                <th scope="col">Excluir</th>
+            </tr>
+        </thead>
+        {{ if .Lists}}
+        <tbody>
+            {{ range $index, $element := .Lists }}
+            <tr>
+                <td>
+                    {{ if (gt $index 0)}}
+                    <a href="/upTemplate/{{ $element.Id }}">
+                        <i class="fas fa-arrow-up" style="font-size:30px;"></i>
+                    </a>
+                    {{ end }}
+                    {{ if (gt $len $index) }}
+                    <a href="/downTemplate/{{ $element.Id }}" style="float: right;">
+                        <i class="fas fa-arrow-down" style="font-size:30px;"></i>
+                    </a>
+                    {{ end }}
+                </td>
+                <td>
+                    <a href="/checkPage/{{ $element.Id }}">
+                        {{ if $element.Check }}
+                        <i class="fas fa-check-square" style="font-size:30px;"></i>
+                        {{ else }}
+                        <i class="far fa-square" style="font-size:30px;"></i>
+                        {{ end }}
+                    </a>
+                </td>
+                <td><a href="/viewTemplate/{{ $element.Id }}">{{ $element.Store }}</a></td>
+                <td>{{ $element.Product }}</td>
+                <td><a href="/edit/{{ $element.Id }}" type="button" class="btn btn-primary btn-block">
+                        <i class="fas fa-edit"></i></a></td>
+                <td><a href="/delete/{{ $element.Id }}" type="button" class="btn btn-danger btn-block"><i
+                            class="fas fa-trash-alt"></i></a></td>
+            </tr>
+            {{ end }}
+            {{ else }}
+            <tr>
+                <td colspan="6" class="text-center">
+                    <h3>Você não tem nenhuma lista cadastrada</h3>
+                </td>
+            </tr>
+            {{ end }}
+        </tbody>
+    </table>
+
+</div>
 {{template "footer"}}
 
 {{end}}

@@ -1,0 +1,40 @@
+{{define "list"}}
+
+{{template "header"}}
+<div class="container">
+
+    <h1 class="text-center">{{ .Store }}</h1>
+    <h1 class="text-center">{{ .Product }}</h1>
+
+    <div class="row mt-5">
+        <div class="col-sm">
+            <a href="/check/{{ .Id }}" type="button" {{ if .Check }} class="btn btn-success btn-block">
+                <i class="fas fa-check-square"></i>
+                {{ else }}
+                class="btn btn-secondary btn-block">
+                <i class="far fa-square"></i>
+                {{ end }}
+            </a>
+        </div>
+        <div class="col-sm">
+            <a href="/edit/{{ .Id }}" type="button" class="btn btn-primary btn-block">
+                <i class="fas fa-edit"></i>
+            </a>
+        </div>
+        <div class="col-sm">
+            <a href="/delete/{{ .Id }}" type="button" class="btn btn-danger btn-block">
+                <i class="fas fa-trash-alt"></i>
+            </a>
+        </div>
+    </div>
+
+    <div class="row mt-3">
+        <div class="col-sm">
+            <a href="/create/" type="button" class="btn btn-outline-success btn-block">Voltar</a>
+        </div>
+    </div>
+</div>
+
+{{template "footer"}}
+
+{{end}}
