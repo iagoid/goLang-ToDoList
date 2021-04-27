@@ -1,21 +1,27 @@
 {{define "edit"}}
 {{template "header"}}
 
-    <div class="container">
-        
-            
-        <h1 class="text-center mt-3">Editando</h1>
-        <form method="POST">
-            <div class="form-group">
-                <input name="store" type="text" class="form-control" placeholder="Estabelecimento" value="{{ .Store }}">
-            </div>
-            <div class="form-group">
-                <textarea placeholder="Produtos" name="product" class="form-control" rows="3" >{{ .Product }}</textarea>
-            </div>
-            <button type="submit" class="btn btn-primary btn-lg btn-block">Editar</button>
-        </form>       
+<div class="container">
 
+
+    <h1 class="text-center mt-3">Editando</h1>
+    <form method="POST">
+        <div class="form-group">
+            <input name="store" type="text" class="form-control" placeholder="Estabelecimento" value="{{ .Store }}">
+        </div>
+        <div class="form-group">
+            <textarea placeholder="Produtos" name="product" class="form-control" rows="3">{{ .Product }}</textarea>
+        </div>
+        <button type="submit" class="btn btn-primary btn-lg btn-block">Editar</button>
+    </form>
+    <div class="row mt-3">
+        <div class="col-sm">
+            <a href="/createTemplate/" type="button" class="btn btn-outline-success btn-block">Voltar</a>
+        </div>
     </div>
+
+</div>
+
 {{template "footer"}}
 
 {{end}}

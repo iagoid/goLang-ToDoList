@@ -203,9 +203,16 @@ func TestEditListErrorID(t *testing.T) {
 
 /*
 func TestDeleteList(t *testing.T) {
-	res, err := http.Get(host + "/delete/" + idCreatedTest)
+	client := &http.Client{}
+
+	req, err := http.NewRequest("DELETE", host+"/delete/"+idCreatedTest+"/", nil)
 	if err != nil {
 		t.Fatal(err)
+	}
+	res, err := client.Do(req)
+	if err != nil {
+		fmt.Println(err)
+		return
 	}
 
 	body, err := ioutil.ReadAll(res.Body)
@@ -219,16 +226,55 @@ func TestDeleteList(t *testing.T) {
 			status, http.StatusAccepted)
 	}
 }
-
 func TestDeleteListErrorID(t *testing.T) {
-	req, err := http.Get(host + "/delete/" + inexistentID)
+	client := &http.Client{}
+
+	req, err := http.NewRequest("DELETE", host+"/delete/"+inexistentID+"/", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
+	res, err := client.Do(req)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
 
-	if status := req.StatusCode; status != http.StatusNotFound {
+	if status := res.StatusCode; status != http.StatusNotFound {
 		t.Errorf("TestDeleteListErrorID não retornou o status esperado: \nretornado %v \nesperado %v",
 			status, http.StatusNotFound)
 	}
 }
 */
+
+func TestUpList(t *testing.T) {
+	res, err := http.Get("http://localhost:8080/up/" + fmt.Sprint(idCreatedTest))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if status := res.StatusCode; status != http.StatusOK {
+		t.Errorf("TestUpList não retornou o status esperado: \nretornado %v \nesperado %v",
+			status, http.StatusOK)
+	}
+}
+
+func TestDownList(t *testing.T) {
+	res, err := http.Get("http://localhost:8080/down/" + fmt.Sprint(idCreatedTest))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if status := res.StatusCode; status != http.StatusOK {
+		t.Errorf("TestUpList não retornou o status esperado: \nretornado %v \nesperado %v",
+			status, http.StatusOK)
+	}
+}
+
+func TestCheck(t *testing.T) {
+	res, err := http.Get("http://localhost:8080/check/" + fmt.Sprint(idCreatedTest))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if status := res.StatusCode; status != http.StatusOK {
+		t.Errorf("TestUpList não retornou o status esperado: \nretornado %v \nesperado %v",
+			status, http.StatusOK)
+	}
+}

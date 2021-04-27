@@ -61,7 +61,7 @@
                     {{ end }}
                 </td>
                 <td>
-                    <a href="/checkPage/{{ $element.Id }}">
+                    <a href="/checkTemplate/{{ $element.Id }}">
                         {{ if $element.Check }}
                         <i class="fas fa-check-square" style="font-size:30px;"></i>
                         {{ else }}
@@ -71,9 +71,9 @@
                 </td>
                 <td><a href="/viewTemplate/{{ $element.Id }}">{{ $element.Store }}</a></td>
                 <td>{{ $element.Product }}</td>
-                <td><a href="/edit/{{ $element.Id }}" type="button" class="btn btn-primary btn-block">
+                <td><a href="/editTemplate/{{ $element.Id }}" type="button" class="btn btn-primary btn-block">
                         <i class="fas fa-edit"></i></a></td>
-                <td><a href="/delete/{{ $element.Id }}" type="button" class="btn btn-danger btn-block"><i
+                <td><a href="/deleteTemplate/{{ $element.Id }}" type="button" class="btn btn-danger btn-block"><i
                             class="fas fa-trash-alt"></i></a></td>
             </tr>
             {{ end }}
